@@ -1,0 +1,152 @@
+import React, { useState, useEffect } from 'react'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { Table } from "@/components/ui/table"
+import { Button } from "@/components/ui/button"
+
+interface SalaryData {
+  work_year: number
+  job_title: string
+  salary_currency: string
+  salary_in_usd: number
+  employee_residence: string
+  experience_level: string
+  employment_type: string
+  company_location: string
+  company_size: string
+}
+
+interface AggregatedData {
+  year: number
+  totalJobs: number
+  averageSalary: number
+}
+
+interface JobTitleData {
+  jobTitle: string
+  count: number
+}
+
+// Mock data
+const mockData: SalaryData[] = [
+  { work_year: 2020, job_title: "ML Engineer", salary_currency: "USD", salary_in_usd: 100000, employee_residence: "US", experience_level: "SE", employment_type: "FT", company_location: "US", company_size: "L" },
+  { work_year: 2020, job_title: "Data Scientist", salary_currency: "USD", salary_in_usd: 95000, employee_residence: "US", experience_level: "SE", employment_type: "FT", company_location: "US", company_size: "L" },
+  { work_year: 2021, job_title: "ML Engineer", salary_currency: "USD", salary_in_usd: 110000, employee_residence: "US", experience_level: "SE", employment_type: "FT", company_location: "US", company_size: "L" },
+  { work_year: 2021, job_title: "Data Scientist", salary_currency: "USD", salary_in_usd: 100000, employee_residence: "US", experience_level: "SE", employment_type: "FT", company_location: "US", company_size: "L" },
+  { work_year: 2022, job_title: "ML Engineer", salary_currency: "USD", salary_in_usd: 120000, employee_residence: "US", experience_level: "SE", employment_type: "FT", company_location: "US", company_size: "L" },
+  { work_year: 2022, job_title: "Data Scientist", salary_currency: "USD", salary_in_usd: 105000, employee_residence: "US", experience_level: "SE", employment_type: "FT", company_location: "US", company_size: "L" },
+  { work_year: 2023, job_title: "ML Engineer", salary_currency: "USD", salary_in_usd: 130000, employee_residence: "US", experience_level: "SE", employment_type: "FT", company_location: "US", company_size: "L" },
+  { work_year: 2023, job_title: "Data Scientist", salary_currency: "USD", salary_in_usd: 110000, employee_residence: "US", experience_level: "SE", employment_type: "FT", company_location: "US", company_size: "L" },
+  { work_year: 2024, job_title: "ML Engineer", salary_currency: "USD", salary_in_usd: 140000, employee_residence: "US", experience_level: "SE", employment_type: "FT", company_location: "US", company_size: "L" },
+  { work_year: 2024, job_title: "Data Scientist", salary_currency: "USD", salary_in_usd: 115000, employee_residence: "US", experience_level: "SE", employment_type: "FT", company_location: "US", company_size: "L" },
+]
+
+export default function Component() {
+  const [aggregatedData, setAggregatedData] = useState<AggregatedData[]>([])
+  const [selectedYear, setSelectedYear] = useState<number | null>(null)
+  const [jobTitles, setJobTitles] = useState<JobTitleData[]>([])
+
+  useEffect(() => {
+    processData(mockData)
+  }, [])
+
+  const processData = (rawData: SalaryData[]) => {
+    const aggregated = rawData.reduce((acc, curr) => {
+      const year = curr.work_year
+      if (!acc[year]) {
+        acc[year] = { totalJobs: 0, totalSalary: 0 }
+      }
+      acc[year].totalJobs += 1
+      acc[year].totalSalary += curr.salary_in_usd
+      return acc
+    }, {} as Record<number, { totalJobs: number; totalSalary: number }>)
+
+    const processedData = Object.entries(aggregated).map(([year, data]) => ({
+      year: parseInt(year),
+      totalJobs: data.totalJobs,
+      averageSalary: Math.round(data.totalSalary / data.totalJobs),
+    }))
+
+    setAggregatedData(processedData)
+  }
+
+  const handleRowClick = (year: number) => {
+    setSelectedYear(year)
+    const yearData = mockData.filter((item) => item.work_year === year)
+    const titleCounts = yearData.reduce((acc, curr) => {
+      acc[curr.job_title] = (acc[curr.job_title] || 0) + 1
+      return acc
+    }, {} as Record<string, number>)
+    
+    const jobTitleData = Object.entries(titleCounts).map(([title, count]) => ({
+      jobTitle: title,
+      count,
+    }))
+    
+    setJobTitles(jobTitleData)
+  }
+
+  return (
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4">ML Engineer Salary Dashboard</h1>
+      <div className="mb-8">
+        <ResponsiveContainer width="100%" height={300}>
+          <LineChart data={aggregatedData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="year" />
+            <YAxis yAxisId="left" />
+            <YAxis yAxisId="right" orientation="right" />
+            <Tooltip />
+            <Legend />
+            <Line yAxisId="left" type="monotone" dataKey="totalJobs" stroke="#8884d8" name="Total Jobs" />
+            <Line yAxisId="right" type="monotone" dataKey="averageSalary" stroke="#82ca9d" name="Average Salary (USD)" />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="mb-8">
+        <Table>
+          <thead>
+            <tr>
+              <th>Year</th>
+              <th>Total Jobs</th>
+              <th>Average Salary (USD)</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {aggregatedData.map((row) => (
+              <tr key={row.year}>
+                <td>{row.year}</td>
+                <td>{row.totalJobs}</td>
+                <td>${row.averageSalary.toLocaleString()}</td>
+                <td>
+                  <Button onClick={() => handleRowClick(row.year)}>View Details</Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+      </div>
+      {selectedYear && (
+        <div>
+          <h2 className="text-xl font-semibold mb-2">Job Titles for {selectedYear}</h2>
+          <Table>
+            <thead>
+              <tr>
+                <th>Job Title</th>
+                <th>Count</th>
+              </tr>
+            </thead>
+            <tbody>
+              {jobTitles.map((job) => (
+                <tr key={job.jobTitle}>
+                  <td>{job.jobTitle}</td>
+                  <td>{job.count}</td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </div>
+      )}
+    </div>
+  )
+}
